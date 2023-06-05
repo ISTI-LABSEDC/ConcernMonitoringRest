@@ -23,8 +23,5 @@ public final class LoggerComponent {
 
    public void log(Marker marker) {
       logger.debug(marker,"Parent log message");
-   }
-
-
-
+   }   		
 }

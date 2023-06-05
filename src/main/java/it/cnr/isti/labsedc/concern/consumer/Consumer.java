@@ -9,6 +9,7 @@ import javax.jms.JMSException;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import it.cnr.isti.labsedc.concern.ConcernApp;
 import it.cnr.isti.labsedc.concern.cep.CepType;
 import it.cnr.isti.labsedc.concern.event.ConcernEvaluationRequestEvent;
 import it.cnr.isti.labsedc.concern.eventListener.ChannelProperties;
@@ -17,19 +18,34 @@ public class Consumer extends Thread{
 
 	private static Logger logger;
 
-	public void run() {
-		sendRule();
+	public boolean run(String rule) {
+		//sendRule();
+		return sendRule(rule);
 	}
 	
-	private static void sendRule() {
-		String brokerUrl = "tcp://localhost:61616";
+	private static boolean sendRule(String rule) {
+		String brokerUrl = ConcernApp.brokerUrlJMS;
 
 		ConcernAbstractConsumer cons = new ConcernAbstractConsumer();
 		try {
 			cons.init(brokerUrl,"vera", "griselda");
-			String digitalTwin = Consumer.readFile(System.getProperty("user.dir")+ "/src/main/resources/rules/genericRulesList/digitalTwin.drl");
+			cons.sendEvaluationRequest("DROOLS-InstanceOne", sendingRule(rule, "Manually loaded rule"));
+			return true;
+		} catch (JMSException e) {
+			e.printStackTrace();
+			return false;
+		}
+	}
+	
+	private static void sendRule() {
+		String brokerUrl = ConcernApp.brokerUrlJMS;
+
+		ConcernAbstractConsumer cons = new ConcernAbstractConsumer();
+		try {
+			cons.init(brokerUrl,"vera", "griselda");
+			String ictgw = Consumer.readFile(System.getProperty("user.dir")+ "/src/main/resources/rules/ictgw/checkEventSequence.drl");
 			logger.info("sending rule");
-			cons.sendEvaluationRequest("DROOLS-InstanceOne", sendingRule(digitalTwin, "DTMetaRule"));
+			cons.sendEvaluationRequest("DROOLS-InstanceOne", sendingRule(ictgw, "noMultipleOccurrences"));
 			logger.info("rule sent");
 
 			/*

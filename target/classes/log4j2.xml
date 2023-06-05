@@ -15,16 +15,6 @@
         </Console>
 
         <!-- File Appenders on need basis -->
-        <RollingFile name="frameworkLog" fileName="${APP_LOG_ROOT}/app-framework.log"
-            filePattern="${APP_LOG_ROOT}/app-framework-%d{yyyy-MM-dd}-%i.log">
-            <LevelRangeFilter minLevel="INFO" maxLevel="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
-            <PatternLayout pattern="${LOG_PATTERN}"/>
-            <Policies>
-                <SizeBasedTriggeringPolicy size="19500KB" />
-            </Policies>
-            <DefaultRolloverStrategy max="10"/>
-        </RollingFile>
-
         <RollingFile name="debugLog" fileName="${APP_LOG_ROOT}/app-debug.log"
             filePattern="${APP_LOG_ROOT}/app-debug-%d{yyyy-MM-dd}-%i.log">
             <LevelRangeFilter minLevel="INFO" maxLevel="DEBUG" onMatch="ACCEPT" onMismatch="DENY"/>
@@ -44,10 +34,10 @@
             </Policies>
             <DefaultRolloverStrategy max="10"/>
         </RollingFile>
-
-        <RollingFile name="errorLog" fileName="${APP_LOG_ROOT}/app-error.log"
-            filePattern="${APP_LOG_ROOT}/app-error-%d{yyyy-MM-dd}-%i.log" >
-            <LevelRangeFilter minLevel="INFO" maxLevel="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
+        
+        <RollingFile name="notificationLog" fileName="${APP_LOG_ROOT}/notification-info.log"
+            filePattern="${APP_LOG_ROOT}/notification-info-%d{yyyy-MM-dd}-%i.log" >
+            <LevelRangeFilter minLevel="INFO" maxLevel="INFO" onMatch="ACCEPT" onMismatch="DENY"/>
             <PatternLayout pattern="${LOG_PATTERN}"/>
             <Policies>
                 <SizeBasedTriggeringPolicy size="19500KB" />
@@ -55,60 +45,47 @@
             <DefaultRolloverStrategy max="10"/>
         </RollingFile>
 
-        <RollingFile name="perfLog" fileName="${APP_LOG_ROOT}/app-perf.log"
-            filePattern="${APP_LOG_ROOT}/app-perf-%d{yyyy-MM-dd}-%i.log" >
+        <RollingFile name="storageLog" fileName="${APP_LOG_ROOT}/storage-info.log"
+            filePattern="${APP_LOG_ROOT}/storage-info-%d{yyyy-MM-dd}-%i.log" >
+            <LevelRangeFilter minLevel="INFO" maxLevel="DEBUG" onMatch="ACCEPT" onMismatch="DENY"/>
             <PatternLayout pattern="${LOG_PATTERN}"/>
             <Policies>
                 <SizeBasedTriggeringPolicy size="19500KB" />
             </Policies>
-            <DefaultRolloverStrategy max="1"/>
+            <DefaultRolloverStrategy max="10"/>
         </RollingFile>
-
-        <RollingFile name="traceLog" fileName="${APP_LOG_ROOT}/app-trace.log"
-            filePattern="${APP_LOG_ROOT}/app-trace-%d{yyyy-MM-dd}-%i.log" >
-            <PatternLayout pattern="${LOG_PATTERN}"/>
-            <Policies>
-                <SizeBasedTriggeringPolicy size="19500KB" />
-            </Policies>
-            <DefaultRolloverStrategy max="1"/>
-        </RollingFile>
-
     </Appenders>
 
     <Loggers>
 
-        <Logger name="it.cnr.isti.labsedc.concern.storage" additivity="false" level="trace">
-            <AppenderRef ref="debugLog" />
-            <AppenderRef ref="infoLog"  />
-            <AppenderRef ref="errorLog" />
+        <Logger name="it.cnr.isti.labsedc.concern.storage" additivity="false" level="debug">
+            <AppenderRef ref="storageLog" />
             <AppenderRef ref="Console"  />
         </Logger>
 
         <Logger name="it.cnr.isti.labsedc.concern.cep" additivity="false" level="debug">
             <AppenderRef ref="debugLog" />
             <AppenderRef ref="infoLog"  />
-            <AppenderRef ref="errorLog" />
-            <AppenderRef ref="Console"  />
         </Logger>
 
        <Logger name="it.cnr.isti.labsedc.concern.broker" additivity="false" level="trace">
             <AppenderRef ref="debugLog" />
             <AppenderRef ref="infoLog"  />
-            <AppenderRef ref="errorLog" />
-            <AppenderRef ref="Console"  />
         </Logger>
 
-        <Logger name="it.cnr.isti.labsedc.concern" additivity="false" level="info">
+        <Logger name="it.cnr.isti.labsedc.concern" additivity="false" level="debug">
             <AppenderRef ref="debugLog" />
             <AppenderRef ref="infoLog"  />
-            <AppenderRef ref="errorLog" />
-            <AppenderRef ref="Console"  />
         </Logger>
+
+        <Logger name="it.cnr.isti.labsedc.concern.notification" additivity="false" level="debug">
+            <AppenderRef ref="notificationLog" />
+        </Logger>        
 
         <Root level="warn">
+            <AppenderRef ref="storageLog" />
             <AppenderRef ref="debugLog" />
             <AppenderRef ref="infoLog"  />
-            <AppenderRef ref="errorLog" />
             <AppenderRef ref="Console"  />
         </Root>
 

@@ -1,5 +1,6 @@
 package it.cnr.isti.labsedc.concern.cep;
 
+import java.util.ArrayList;
 import java.util.Collection;
 
 import javax.jms.JMSException;
@@ -119,7 +120,6 @@ public class EsperComplexEventProcessorManager extends ComplexEventProcessorMana
 
 	@Override
 	public void onMessage(Message message) {
-
 		if (message instanceof ObjectMessage) {
 			try {
 					ObjectMessage msg = (ObjectMessage) message;
@@ -145,7 +145,8 @@ public class EsperComplexEventProcessorManager extends ComplexEventProcessorMana
 		}
 	}
 
-	private void loadRule(ConcernEvaluationRequestEvent<?> receivedEvent) {
+	@Override
+	public void loadRule(ConcernEvaluationRequestEvent<?> receivedEvent) {
 //			
 //		String xmlMessagePayload = receivedEvent.getEvaluationRule();
 //		String sender = receivedEvent.getSenderID();
@@ -229,4 +230,29 @@ public class EsperComplexEventProcessorManager extends ComplexEventProcessorMana
 		System.out.println("asd");
 		return false;
 	}
+
+	@Override
+	public int getAmountOfLoadedRules() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public String getLastRuleLoadedName() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public ArrayList<String> getRulesList() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public boolean deleteRule(String ruleName) {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
 }

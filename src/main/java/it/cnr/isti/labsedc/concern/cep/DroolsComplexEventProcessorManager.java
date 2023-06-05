@@ -1,6 +1,8 @@
 package it.cnr.isti.labsedc.concern.cep;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 
 import javax.jms.JMSException;
 import javax.jms.Message;
@@ -22,6 +24,7 @@ import org.eclipse.paho.client.mqttv3.MqttClient;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttSecurityException;
 import org.kie.api.definition.KiePackage;
+import org.kie.api.definition.rule.Rule;
 import org.kie.api.io.Resource;
 import org.kie.api.io.ResourceType;
 import org.kie.api.runtime.KieSession;
@@ -61,8 +64,13 @@ public class DroolsComplexEventProcessorManager extends ComplexEventProcessorMan
     private static KieSession ksession;
 	private EntryPoint eventStream;
 	private boolean isUsingJMS = true;
+	public static ArrayList<String> rulesNames;
+	public static int totalRulesLoaded = 0;
+	public static String lastRuleLoadedName;
 
-	public DroolsComplexEventProcessorManager(String instanceName, String staticRuleToLoadAtStartup, String connectionUsername, String connectionPassword, CepType type, boolean runningInJMS) {
+	public DroolsComplexEventProcessorManager(String instanceName, String staticRuleToLoadAtStartup, 
+												String connectionUsername, String connectionPassword, 
+												CepType type, boolean runningInJMS) {
 		super();
 		isUsingJMS = runningInJMS;
 		try{
@@ -170,21 +178,26 @@ public class DroolsComplexEventProcessorManager extends ComplexEventProcessorMan
 										ConcernICTGatewayEvent<?> receivedEvent = (ConcernICTGatewayEvent<?>) msg.getObject();
 										insertEvent(receivedEvent);		
 									} else {
-										if (msg.getObject() instanceof ConcernEvaluationRequestEvent<?>) {		
-											ConcernEvaluationRequestEvent<?> receivedEvent = (ConcernEvaluationRequestEvent<?>) msg.getObject();
-											if (receivedEvent.getCepType() == CepType.DROOLS) {
-												logger.info("...CEP named " + this.getInstanceName() + " receives rules "  + receivedEvent.getData() );
-												loadRule(receivedEvent);	
+//										if(msg.getObject() instanceof ConcernAnemometerEvent<?>) {
+//											ConcernAnemometerEvent<?> receivedEvent = (ConcernAnemometerEvent<?>) msg.getObject();
+//											insertEvent(receivedEvent);
+//										} else {
+											if (msg.getObject() instanceof ConcernEvaluationRequestEvent<?>) {		
+												ConcernEvaluationRequestEvent<?> receivedEvent = (ConcernEvaluationRequestEvent<?>) msg.getObject();
+												if (receivedEvent.getCepType() == CepType.DROOLS) {
+													logger.info("...CEP named " + this.getInstanceName() + " receives rules "  + receivedEvent.getData() );
+													loadRule(receivedEvent);
+												}
 											}
-										}
+										//}
 									}
 								}
 							}
 						}
 					}
 				}	catch(ClassCastException | JMSException asd) {
-					logger.error(asd.getMessage());
-					logger.error("error on casting or getting ObjectMessage");
+					logger.debug(asd.getMessage());
+					logger.debug("error on casting or getting ObjectMessage");
 			}
 		}
 		if (message instanceof TextMessage) {
@@ -197,12 +210,13 @@ public class DroolsComplexEventProcessorManager extends ComplexEventProcessorMan
 		}
 	}
 
-	private void loadRule(ConcernEvaluationRequestEvent<?> receivedEvent) {
+	@Override
+	public void loadRule(ConcernEvaluationRequestEvent<?> receivedEvent) {
 		Object[] packages = kbase.getKiePackages().toArray();
 		for (int m = 0; m< packages.length; m++) {
-		System.out.println("How many rules within package: " + ((KiePackage)packages[m]).getName() + " " + ((KiePackage)packages[m]).getRules().size());
 		}
 		Resource drlToLoad = ResourceFactory.newByteArrayResource(receivedEvent.getData().toString().getBytes());
+		DroolsComplexEventProcessorManager.lastRuleLoadedName = receivedEvent.getEvaluationRuleName();
         kbuilder.add(drlToLoad, ResourceType.DRL);
         pkgs = kbuilder.getKnowledgePackages();
         kbase.addPackages(pkgs);
@@ -212,18 +226,56 @@ public class DroolsComplexEventProcessorManager extends ComplexEventProcessorMan
             throw new RuntimeException("unable to compile dlr");
         }
         logger.info("...CEP named " + this.getInstanceName() + " load rules received into the knowledgeBase");
-        Object[] packages2 = kbase.getKiePackages().toArray();
+        rulesCounter();
+	}
+	
+	private void rulesCounter() {
+		Object[] packages2 = kbase.getKiePackages().toArray();
+        DroolsComplexEventProcessorManager.rulesNames = new ArrayList<String>();
+        DroolsComplexEventProcessorManager.totalRulesLoaded = 0;
 		for (int m = 0; m< packages2.length; m++) {
-		logger.info("How many rules within package: " + ((KiePackage)packages2[m]).getName() + " " + ((KiePackage)packages2[m]).getRules().size());
+			int RulesForPackage = ((KiePackage)packages2[m]).getRules().size();
+			Iterator<Rule> coll = ((KiePackage)packages2[m]).getRules().iterator();
+			while (coll.hasNext()) {
+				DroolsComplexEventProcessorManager.rulesNames.add(coll.next().getName());
+			}			
+			DroolsComplexEventProcessorManager.totalRulesLoaded  = DroolsComplexEventProcessorManager.totalRulesLoaded + RulesForPackage;
+		logger.info("How many rules within package: " + ((KiePackage)packages2[m]).getName() + " " + RulesForPackage);
+		}		
+	}
+
+	@Override
+	public boolean deleteRule(String ruleName) {
+		Object[] packages = kbase.getKiePackages().toArray();
+		for (int m = 0; m< packages.length; m++) {
+			Collection<Rule> rls = ((KiePackage)packages[m]).getRules();
+			Object[] rulesArray = rls.toArray();
+			if (rulesArray.length > 0) {
+				for (int j = 0; j<rulesArray.length;j++) {
+					Rule gg = (Rule) rulesArray[j];
+					if (gg.getName().compareTo(ruleName) == 0)
+					{
+						kbase.removeRule(
+								((KiePackage)packages[m]).getName(), ruleName);
+						rulesCounter();
+						logger.info("Rule " + ruleName + " removed");
+						logger.info("Rule active: " + kbase.getKiePackage(((KiePackage)packages[m]).getName()).getRules().size());
+						return true;
+					}
+				}
+			}
 		}
+		logger.info("Rule " + ruleName + " not found");
+		return false;
 	}
 
 	private void insertEvent(ConcernAbstractEvent<?> receivedEvent) {
 		if (eventStream != null && receivedEvent != null) {
 			eventStream.insert(receivedEvent);
-			logger.info("...CEP named " + this.getInstanceName() + " received an event of type:\n"  + receivedEvent.getClass().getCanonicalName() +" in the stream, sent from " + receivedEvent.getSenderID());
+			logger.debug("...CEP named " + this.getInstanceName() + " received an event of type:\n"  + receivedEvent.getClass().getCanonicalName() +" in the stream, sent from " + receivedEvent.getSenderID());
 			if (receivedEvent instanceof ConcernBaseEvent<?>) {
-				logger.info("with data:" +
+				ConcernApp.storageManager.saveMessage(receivedEvent);
+				logger.debug("with data:" +
 						"\nName: "+ receivedEvent.getName() +
 						"\nDestination: " + receivedEvent.getDestinationID() +
 						"\nData: " + receivedEvent.getData() +
@@ -232,7 +284,11 @@ public class DroolsComplexEventProcessorManager extends ComplexEventProcessorMan
 						"\nSessionID: " + receivedEvent.getSessionID() +
 						"\nChecksum: " + receivedEvent.getChecksum() +
 						"\nCepType: " + receivedEvent.getCepType().toString());
+			
 			}
+//			if (receivedEvent instanceof ConcernAnemometerEvent<?>) {
+//				ConcernApp.storageManager.saveWindData((ConcernAnemometerEvent<?>)receivedEvent);
+//			}
 		}			
 	}
 
@@ -245,5 +301,21 @@ public class DroolsComplexEventProcessorManager extends ComplexEventProcessorMan
 	public boolean isAllowedToConsume(ConnectionContext context, org.apache.activemq.command.Message message) {
 		System.out.println("asd");
 		return false;
+	}
+	
+	@Override
+	public int getAmountOfLoadedRules() {
+		// TODO Auto-generated method stub
+		return totalRulesLoaded;
+	}
+	
+	@Override
+	public String getLastRuleLoadedName() {
+		return lastRuleLoadedName;
+	}
+
+	@Override
+	public ArrayList<String> getRulesList() {
+		return DroolsComplexEventProcessorManager.rulesNames;
 	}
 }
